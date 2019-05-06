@@ -10,13 +10,18 @@ test('User service', t => {
 
   testUtils.connectToDatabase(t, r, (connection) => conn = connection)
 
+  const admin = {
+    roles: ["admin"]
+  }
+
   let userId
 
   t.test('create user', t => {
     t.plan(2)
 
     testUtils.runCommand(t, r, 'users', {
-      type: 'UserCreate'
+      type: 'UserCreate',
+      client: admin
     }, (cId) => { }).then(
       result => {
         userId = result
@@ -128,6 +133,7 @@ test('User service', t => {
 
     testUtils.runCommand(t, r, 'users', {
       type: 'UserUpdate',
+      client: admin,
       parameters: {
         user: userId,
         roles: ['test_object']
@@ -157,7 +163,8 @@ test('User service', t => {
       type: 'UserDelete',
       parameters: {
         user: userId
-      }
+      },
+      client: admin
     }, (cId) => { }).then(
       result => {
       }

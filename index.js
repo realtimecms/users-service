@@ -1,7 +1,7 @@
 const r = require.main.rethinkdb || require('rethinkdb')
 if (require.main === module) require.main.rethinkdb = r
 
-const rtcms = require("../../RTCms")
+const rtcms = require("realtime-cms")
 
 const users = rtcms.createServiceDefinition({
   name: "users",
@@ -79,17 +79,18 @@ users.action({
     if(!userRow) throw new Error("notFound")
     emit([{
       type: "UserUpdated",
+      user,
       data: {
         roles
       }
     }])
-    emit("session" [{
+    emit("session", [{
       type: "rolesUpdated",
       user,
       roles,
       oldRoles : userRow.roles || []
     }])
-    return emailPassword
+    return user
   }
 })
 
