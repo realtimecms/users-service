@@ -2,6 +2,7 @@ const r = require.main.rethinkdb || require('rethinkdb')
 if (require.main === module) require.main.rethinkdb = r
 
 const rtcms = require("realtime-cms")
+const userData = require('../config/userData.js')
 
 const users = rtcms.createServiceDefinition({
   name: "users",
@@ -26,7 +27,8 @@ const User = users.model({
         type: Object
       },
       defaultValue: []
-    }
+    },
+    userData
   },
   crud: {
     deleteTrigger: true,
