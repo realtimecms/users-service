@@ -2,12 +2,13 @@ const r = require.main.rethinkdb || require('rethinkdb')
 if (require.main === module) require.main.rethinkdb = r
 
 const rtcms = require("realtime-cms")
-const userData = require('../config/userData.js')
 
 const users = rtcms.createServiceDefinition({
   name: "users",
   eventSourcing: true
 })
+
+const userData = require('../config/userData.js')(users)
 
 const User = users.model({
   name: "User",
