@@ -70,20 +70,22 @@ users.action({
       of: {
         type: String
       }
-    }
+    },
+    userData
   },
   returns: {
     type: User,
     idOnly: true
   },
-  async execute({ user, roles }, context, emit) {
+  async execute({ user, roles, userData }, context, emit) {
     const userRow = await User.get(user)
     if(!userRow) throw new Error("notFound")
     emit([{
       type: "UserUpdated",
       user,
       data: {
-        roles
+        roles,
+        userData
       }
     }])
     emit("session", [{
