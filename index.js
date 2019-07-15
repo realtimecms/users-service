@@ -36,6 +36,7 @@ const User = users.model({
     options: {
       access: (params, {client, service}) => {
         console.log("CHECK ACCESS", client)
+        if(client.user == params.user) return true
         return client.roles.includes('admin')
       }
     }
