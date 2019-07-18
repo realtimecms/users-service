@@ -31,6 +31,11 @@ const User = users.model({
     },
     userData
   },
+  indexes: {
+    email: {
+      property: "userData.email"
+    }
+  },
   crud: {
     deleteTrigger: true,
     options: {
