@@ -50,10 +50,7 @@ const User = users.model({
     //console.log("USER CHANGE", id, oldValue, newValue)
     if((oldValue && newValue && JSON.stringify(oldValue.loginMethods) != JSON.stringify(newValue.loginMethods))
        || (!oldValue && newValue)) {
-      let display = "unknown"
-      for(let loginMethod of newValue.loginMethods) {
-        if(loginMethod.type == 'emailPassword') display = loginMethod.email
-      }
+      const display = userData.getDisplay(newValue)
       //console.log("DISPLAY CHANGE", newValue.display, display)
       if(display == newValue.display) {
         //console.log("NO DISPLAY CHANGE NEEDED")
@@ -105,7 +102,6 @@ users.action({
   }
 })
 
-
 users.event({
   name: "loginMethodAdded",
   async execute({ user, method }) {
@@ -125,6 +121,54 @@ users.event({
           m => m('id').ne(method.id).or(m('type').ne(method.type))
       )
     }))
+  }
+})
+
+let publicUserData = {
+  type: Object,
+  properties: {}
+}
+for(let fieldName of userData.publicFields) publicUserData.properties = userData.properties
+
+users.view({
+  name: "publicUserData",
+  properties: {
+    user: {
+      type: User
+    }
+  },
+  returns: {
+    ...publicUserData
+  },
+  rawRead: true,
+  async read({ user }, cd, method) {
+    if(method == "get") {
+      let dataMapper = doc => {
+        let dataMap = { id: doc('id'), display: doc('display') }
+        for(let fieldName of userData.publicFields) {
+          dataMap[fieldName] = doc('userData')(fieldName).default(null)
+        }
+        return dataMap
+      }
+      return User.table.get(user).do(dataMapper)
+    } else {
+      let dataMapper = doc => {
+        let newValMap = {  display: doc('new_val')('display') }, oldValMap = { display: doc('old_val')('display') }
+        for(let fieldName of userData.publicFields) {
+          //console.log("FIELD", fieldName)
+          newValMap[fieldName] = doc('new_val')('userData')(fieldName)
+          oldValMap[fieldName] = doc('old_val')('userData')(fieldName)
+        }
+        return {
+          id: doc('id').default(null),
+          new_val: r.branch(doc('new_val').default(false), newValMap, null),
+          old_val: r.branch(doc('old_val').default(false), oldValMap, null)
+        }
+      }
+      const req = User.table.get(user).changes({includeInitial: true}).map(dataMapper)
+      //console.log("REQ", req)
+      return req
+    }
   }
 })
 
