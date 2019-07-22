@@ -155,8 +155,8 @@ users.view({
         let newValMap = {  display: doc('new_val')('display') }, oldValMap = { display: doc('old_val')('display') }
         for(let fieldName of userData.publicFields) {
           //console.log("FIELD", fieldName)
-          newValMap[fieldName] = doc('new_val')('userData')(fieldName)
-          oldValMap[fieldName] = doc('old_val')('userData')(fieldName)
+          newValMap[fieldName] = doc('new_val')('userData')(fieldName).default(null)
+          oldValMap[fieldName] = doc('old_val')('userData')(fieldName).default(null)
         }
         return {
           id: doc('id').default(null),
