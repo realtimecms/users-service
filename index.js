@@ -45,15 +45,14 @@ const User = users.model({
       }
     }
   },
-  onChange(id, oldValue, newValue) {
+  async onChange(id, oldValue, newValue) {
     //console.log("USER CHANGE", id, oldValue, newValue)
-    if((oldValue && newValue && JSON.stringify(oldValue.loginMethods) != JSON.stringify(newValue.loginMethods))
-       || (!oldValue && newValue)) {
-      const display = userData.getDisplay(newValue)
+    if(newValue) {
+      const display = await userData.getDisplay(newValue)
       //console.log("DISPLAY CHANGE", newValue.display, display)
       if(display == newValue.display) {
         //console.log("NO DISPLAY CHANGE NEEDED")
-        return Promise.resolve(true)
+        return true
       }
       return User.update(id, { display })
     }
