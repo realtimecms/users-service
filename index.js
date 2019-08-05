@@ -2,10 +2,12 @@ const r = require.main.rethinkdb || require('rethinkdb')
 if (require.main === module) require.main.rethinkdb = r
 
 const rtcms = require("realtime-cms")
+const validators = require("../validation")
 
 const users = rtcms.createServiceDefinition({
   name: "users",
-  eventSourcing: true
+  eventSourcing: true,
+  validators
 })
 
 const userData = require('../config/userData.js')(users)
@@ -59,7 +61,6 @@ const User = users.model({
   }
 })
 
-
 users.action({
   name: "UserUpdate", // override CRUD operation
   properties: {
@@ -79,6 +80,7 @@ users.action({
     type: User,
     idOnly: true
   },
+  access: (params, { client }) => client.roles.includes('admin'),
   async execute({ user, roles, userData }, context, emit) {
     const userRow = await User.get(user)
     if(!userRow) throw new Error("notFound")
@@ -97,6 +99,28 @@ users.action({
       oldRoles : userRow.roles || []
     }])
     return user
+  }
+})
+
+users.action({
+  name: "updateUserData",
+  properties: userData.properties,
+  returns: {
+    type: User,
+    idOnly: true
+  },
+  access: (params, { client }) => !!client.user,
+  async execute(userData, { client }, emit) {
+    const userRow = await User.get(client.user)
+    if(!userRow) throw new Error("notFound")
+    emit([{
+      type: "UserUpdated",
+      user: client.user,
+      data: {
+        userData
+      }
+    }])
+    return client.user
   }
 })
 
