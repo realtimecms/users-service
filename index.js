@@ -102,27 +102,60 @@ users.action({
   }
 })
 
+
+let userDataFormProperties = {}
+for(let fieldName of userData.formUpdate) userDataFormProperties[fieldName] = userData.properties[fieldName]
 users.action({
   name: "updateUserData",
-  properties: userData.properties,
+  properties: userDataFormProperties,
   returns: {
     type: User,
     idOnly: true
   },
   access: (params, { client }) => !!client.user,
-  async execute(userData, { client }, emit) {
+  async execute(params, { client }, emit) {
     const userRow = await User.get(client.user)
     if(!userRow) throw new Error("notFound")
+    let cleanData = {}
+    for(let fieldName of userData.formUpdate) cleanData[fieldName] = params[fieldName]
     emit([{
       type: "UserUpdated",
       user: client.user,
       data: {
-        userData
+        userData: cleanData
       }
     }])
     return client.user
   }
 })
+
+for(let fieldName of userData.singleFieldUpdates) {
+  const props = {}
+  props[fieldName] = userData.properties[fieldName]
+  users.action({
+    name: "updateUser"+fieldName.slice(0,1).toUpperCase()+fieldName.slice(1),
+    properties: props,
+    returns: {
+      type: User,
+      idOnly: true
+    },
+    access: (params, { client }) => !!client.user,
+    async execute(params, { client }, emit) {
+      const userRow = await User.get(client.user)
+      if(!userRow) throw new Error("notFound")
+      let updateData = {}
+      updateData[fieldName] = params[fieldName]
+      emit([{
+        type: "UserUpdated",
+        user: client.user,
+        data: {
+          userData: updateData
+        }
+      }])
+      return client.user
+    }
+  })
+}
 
 users.event({
   name: "loginMethodAdded",
@@ -150,7 +183,7 @@ let publicUserData = {
   type: Object,
   properties: {}
 }
-for(let fieldName of userData.publicFields) publicUserData.properties = userData.properties
+for(let fieldName of userData.publicFields) publicUserData.properties[fieldName] = userData.properties[fieldName]
 
 users.view({
   name: "publicUserData",
