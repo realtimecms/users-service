@@ -184,6 +184,35 @@ let publicUserData = {
   properties: {}
 }
 for(let fieldName of userData.publicFields) publicUserData.properties[fieldName] = userData.properties[fieldName]
+async function readLimitedFields(user, fields, method) {
+  if(method == "get") {
+    let dataMapper = doc => {
+      let dataMap = { id: doc('id'), display: doc('display') }
+      for(let fieldName of userData.publicFields) {
+        dataMap[fieldName] = doc('userData')(fieldName).default(null)
+      }
+      return dataMap
+    }
+    return User.table.get(user).do(dataMapper)
+  } else {
+    let dataMapper = doc => {
+      let newValMap = {  display: doc('new_val')('display') }, oldValMap = { display: doc('old_val')('display') }
+      for(let fieldName of fields) {
+        //console.log("FIELD", fieldName)
+        newValMap[fieldName] = doc('new_val')('userData')(fieldName).default(null)
+        oldValMap[fieldName] = doc('old_val')('userData')(fieldName).default(null)
+      }
+      return {
+        id: doc('id').default(null),
+        new_val: r.branch(doc('new_val').default(false), newValMap, null),
+        old_val: r.branch(doc('old_val').default(false), oldValMap, null)
+      }
+    }
+    const req = User.table.get(user).changes({includeInitial: true}).map(dataMapper)
+    //console.log("REQ", req)
+    return req
+  }
+}
 
 users.view({
   name: "publicUserData",
@@ -196,36 +225,29 @@ users.view({
     ...publicUserData
   },
   rawRead: true,
-  async read({ user }, cd, method) {
-    if(method == "get") {
-      let dataMapper = doc => {
-        let dataMap = { id: doc('id'), display: doc('display') }
-        for(let fieldName of userData.publicFields) {
-          dataMap[fieldName] = doc('userData')(fieldName).default(null)
-        }
-        return dataMap
-      }
-      return User.table.get(user).do(dataMapper)
-    } else {
-      let dataMapper = doc => {
-        let newValMap = {  display: doc('new_val')('display') }, oldValMap = { display: doc('old_val')('display') }
-        for(let fieldName of userData.publicFields) {
-          //console.log("FIELD", fieldName)
-          newValMap[fieldName] = doc('new_val')('userData')(fieldName).default(null)
-          oldValMap[fieldName] = doc('old_val')('userData')(fieldName).default(null)
-        }
-        return {
-          id: doc('id').default(null),
-          new_val: r.branch(doc('new_val').default(false), newValMap, null),
-          old_val: r.branch(doc('old_val').default(false), oldValMap, null)
-        }
-      }
-      const req = User.table.get(user).changes({includeInitial: true}).map(dataMapper)
-      //console.log("REQ", req)
-      return req
-    }
+  read({ user }, cd, method) {
+    return readLimitedFields(user, userData.publicFields, method)
   }
 })
+
+if(userData.requiredFields) {
+  let requiredUserData = {
+    type: Object,
+    properties: {}
+  }
+  for (let fieldName of userData.requiredFields) publicUserData.properties[fieldName] = userData.properties[fieldName]
+  users.view({
+    name: "me",
+    properties: {},
+    returns: {
+      ...requiredUserData
+    },
+    rawRead: true,
+    read(ignore, {client, context}, method) {
+      return readLimitedFields(client.user, userData.requiredFields, method)
+    }
+  })
+}
 
 module.exports = users
 
