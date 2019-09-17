@@ -272,6 +272,7 @@ if(userData.requiredFields) {
     },
     rawRead: true,
     read(ignore, {client, context}, method) {
+      if(!client.user) return r.expr(null)
       return readLimitedFields(client.user, userData.requiredFields, method)
     }
   })
