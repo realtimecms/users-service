@@ -129,6 +129,32 @@ users.action({
   }
 })
 
+let completeUserDataFormProperties = {}
+for(let fieldName of userData.formComplete) completeUserDataFormProperties[fieldName] = userData.properties[fieldName]
+users.action({
+  name: "completeUserData",
+  properties: completeUserDataFormProperties,
+  returns: {
+    type: User,
+    idOnly: true
+  },
+  access: (params, { client }) => !!client.user,
+  async execute(params, { client }, emit) {
+    const userRow = await User.get(client.user)
+    if(!userRow) throw new Error("notFound")
+    let cleanData = {}
+    for(let fieldName of userData.formComplete) cleanData[fieldName] = params[fieldName]
+    emit([{
+      type: "UserUpdated",
+      user: client.user,
+      data: {
+        userData: cleanData
+      }
+    }])
+    return client.user
+  }
+})
+
 for(let fieldName of userData.singleFieldUpdates) {
   const props = {}
   props[fieldName] = userData.properties[fieldName]
@@ -156,6 +182,8 @@ for(let fieldName of userData.singleFieldUpdates) {
     }
   })
 }
+
+
 
 users.event({
   name: "loginMethodAdded",
@@ -188,7 +216,7 @@ async function readLimitedFields(user, fields, method) {
   if(method == "get") {
     let dataMapper = doc => {
       let dataMap = { id: doc('id'), display: doc('display') }
-      for(let fieldName of userData.publicFields) {
+      for(let fieldName of fields) {
         dataMap[fieldName] = doc('userData')(fieldName).default(null)
       }
       return dataMap
@@ -235,7 +263,7 @@ if(userData.requiredFields) {
     type: Object,
     properties: {}
   }
-  for (let fieldName of userData.requiredFields) publicUserData.properties[fieldName] = userData.properties[fieldName]
+  for (let fieldName of userData.requiredFields) requiredUserData.properties[fieldName] = userData.properties[fieldName]
   users.view({
     name: "me",
     properties: {},
