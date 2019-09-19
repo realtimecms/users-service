@@ -138,7 +138,7 @@ users.action({
     type: User,
     idOnly: true
   },
-  access: (params, { client }) => !!client.user,
+  access: (params, { client }) => true, //!!client.user,
   async execute(params, { client }, emit) {
     const userRow = await User.get(client.user)
     if(!userRow) throw new Error("notFound")
