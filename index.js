@@ -285,6 +285,10 @@ async function start() {
   //console.log(JSON.stringify(users.toJSON(), null, "  "))
   await rtcms.updateService(users)//, { force: true })
   const service = await rtcms.startService(users, { runCommands: true, handleEvents: true })
+
+  rtcms.connectToDatabase().then(db => require("../config/metricsWriter.js")(db, users.name, () => ({
+
+  })))
 }
 
 if (require.main === module) start().catch( error => { console.error(error); process.exit(1) })
