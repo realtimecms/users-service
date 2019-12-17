@@ -12,26 +12,33 @@ const users = rtcms.createServiceDefinition({
 
 const userData = require('../config/userData.js')(users)
 
+const userFields = {
+  display: {
+    type: String
+  },
+  roles: {
+    type: Array,
+    of: {
+      type: String
+    }
+  },
+  loginMethods: {
+    type: Array,
+    of: {
+      type: Object
+    },
+    defaultValue: []
+  },
+  userData
+}
+
 const User = users.model({
   name: "User",
   properties: {
-    display: {
+    ...userFields,
+    slug: {
       type: String
-    },
-    roles: {
-      type: Array,
-      of: {
-        type: String
-      }
-    },
-    loginMethods: {
-      type: Array,
-      of: {
-        type: Object
-      },
-      defaultValue: []
-    },
-    userData
+    }
   },
   indexes: {
     email: {
@@ -62,6 +69,44 @@ const User = users.model({
 })
 
 users.action({
+  name: "UserCreate",
+  properties: {
+    ...userFields
+  },
+  access: (params, { client }) => {
+    return client.roles && client.roles.includes('admin')
+  },
+  async execute (params, { client, service }, emit) {
+    const user = service.cms.generateUid()
+    let data = { }
+    for(let key in userFields) {
+      data[key] = params[key]
+    }
+
+    data.slug = await service.triggerService('slugs', {
+      type: "CreateSlug",
+      group: "user",
+      to: user
+    })
+    await service.triggerService('slugs', {
+      type: "TakeSlug",
+      group: "user",
+      path: user,
+      to: user,
+      redirect: data.slug
+    })
+
+    emit({
+      type: 'UserCreated',
+      user,
+      data: data
+    })
+
+    return user
+  }
+})
+
+users.action({
   name: "UserUpdate", // override CRUD operation
   properties: {
     user: {
@@ -80,7 +125,9 @@ users.action({
     type: User,
     idOnly: true
   },
-  access: (params, { client }) => client.roles.includes('admin'),
+  access: (params, { client }) => {
+    return client.roles && client.roles.includes('admin')
+  },
   async execute({ user, roles, userData }, context, emit) {
     const userRow = await User.get(user)
     if(!userRow) throw new Error("notFound")
