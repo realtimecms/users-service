@@ -266,6 +266,7 @@ async function readLimitedFields(user, fields, method) {
       for(let fieldName of fields) {
         dataMap[fieldName] = doc('userData')(fieldName).default(null)
       }
+      dataMap.slug = doc('slug').default(null)
       return dataMap
     }
     return User.table.get(user).do(dataMapper)
@@ -277,6 +278,8 @@ async function readLimitedFields(user, fields, method) {
         newValMap[fieldName] = doc('new_val')('userData')(fieldName).default(null)
         oldValMap[fieldName] = doc('old_val')('userData')(fieldName).default(null)
       }
+      newValMap.slug = doc('new_val')('slug').default(null)
+      oldValMap.slug = doc('old_val')('slug').default(null)
       return {
         id: doc('id').default(null),
         new_val: r.branch(doc('new_val').default(false), newValMap, null),
