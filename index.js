@@ -262,7 +262,7 @@ async function limitedFieldsPath(user, fields, method) {
   const queryFunc = async function(input, output, { fields }) {
     const mapper = function (obj) {
       let out = { id: obj.id, display: obj.display, slug: obj.slug || null }
-      for(const field of fields) out[field] = obj[field]
+      for(const field of fields) out[field] = obj.userData[field]
       return out
     }
     await input.table('users_User').onChange((obj, oldObj) =>
