@@ -127,7 +127,7 @@ users.action({
   },
   async execute({ user, roles, userData }, context, emit) {
     const userRow = await User.get(user)
-    if(!userRow) throw new Error("notFound")
+    if(!userRow) throw 'notFound'
     emit({
       type: "UserUpdated",
       user,
@@ -159,7 +159,7 @@ users.action({
   access: (params, { client }) => !!client.user,
   async execute(params, { client }, emit) {
     const userRow = await User.get(client.user)
-    if(!userRow) throw new Error("notFound")
+    if(!userRow) throw 'notFound'
     let cleanData = {}
     for(let fieldName of userData.formUpdate) cleanData[fieldName] = params[fieldName]
     emit({
@@ -185,7 +185,7 @@ users.action({
   access: (params, { client }) => true, //!!client.user,
   async execute(params, { client }, emit) {
     const userRow = await User.get(client.user)
-    if(!userRow) throw new Error("notFound")
+    if(!userRow) throw 'notFound'
     let cleanData = {}
     for(let fieldName of userData.formComplete) cleanData[fieldName] = params[fieldName]
     emit({
@@ -212,7 +212,7 @@ for(let fieldName of userData.singleFieldUpdates) {
     access: (params, { client }) => !!client.user,
     async execute(params, { client }, emit) {
       const userRow = await User.get(client.user)
-      if(!userRow) throw new Error("notFound")
+      if(!userRow) throw 'notFound'
       let updateData = {}
       updateData[fieldName] = params[fieldName]
       emit({
