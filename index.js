@@ -259,16 +259,16 @@ let publicUserData = {
 }
 for(let fieldName of userData.publicFields) publicUserData.properties[fieldName] = userData.properties[fieldName]
 async function limitedFieldsPath(user, fields, method) {
-  const queryFunc = async function(input, output, { fields }) {
+  const queryFunc = async function(input, output, { fields, user }) {
     const mapper = function (obj) {
       let out = { id: obj.id, display: obj.display, slug: obj.slug || null }
       for(const field of fields) out[field] = obj.userData[field]
       return out
     }
-    await input.table('users_User').onChange((obj, oldObj) =>
+    await input.table('users_User').object(user).onChange((obj, oldObj) =>
         output.change(obj && mapper(obj), oldObj && mapper(oldObj)) )
   }
-  const path = ['database', 'queryObject', app.databaseName, `(${queryFunc})`, { fields }]
+  const path = ['database', 'queryObject', app.databaseName, `(${queryFunc})`, { fields, user }]
   return path
 }
 
