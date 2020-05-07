@@ -1,4 +1,4 @@
-Copyright 2019 Michał Łaszczewski
+Copyright 2019-2020 Michał Łaszczewski
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
