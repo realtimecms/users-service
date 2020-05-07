@@ -51,16 +51,13 @@ const User = users.model({
       }
     }
   },
-  async onChange(id, oldValue, newValue) {
-    //console.log("USER CHANGE", id, oldValue, newValue)
+  async onChange(oldValue, newValue) {
     if(newValue) {
       const display = await userData.getDisplay(newValue)
-      //console.log("DISPLAY CHANGE", newValue.display, display)
       if(display == newValue.display) {
-        //console.log("NO DISPLAY CHANGE NEEDED")
         return true
       }
-      return User.update(id, { display })
+      return User.update(newValue.id, { display })
     }
   }
 })
