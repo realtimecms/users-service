@@ -143,32 +143,39 @@ users.action({
   }
 })
 
+let updateMethods = { ...userData.updateMethods }
+if(userData.formUpdate) {
+  updateMethods.updateUserData = userData.formUpdate
+}
 
-let userDataFormProperties = {}
-for(let fieldName of userData.formUpdate) userDataFormProperties[fieldName] = userData.properties[fieldName]
-users.action({
-  name: "updateUserData",
-  properties: userDataFormProperties,
-  returns: {
-    type: User,
-    idOnly: true
-  },
-  access: (params, { client }) => !!client.user,
-  async execute(params, { client }, emit) {
-    const userRow = await User.get(client.user)
-    if(!userRow) throw 'notFound'
-    let cleanData = {}
-    for(let fieldName of userData.formUpdate) cleanData[fieldName] = params[fieldName]
-    emit({
-      type: "UserUpdated",
-      user: client.user,
-      data: {
-        userData: cleanData
-      }
-    })
-    return client.user
-  }
-})
+for(let updateMethodName in updateMethods) {
+  const fields = updateMethods[updateMethodName]
+  let updateMethodProperties = {}
+  for(let fieldName of fields) updateMethodProperties[fieldName] = userData.properties[fieldName]
+  users.action({
+    name: updateMethodName,
+    properties: updateMethodProperties,
+    returns: {
+      type: User,
+      idOnly: true
+    },
+    access: (params, { client }) => !!client.user,
+    async execute(params, { client }, emit) {
+      const userRow = await User.get(client.user)
+      if(!userRow) throw 'notFound'
+      let cleanData = {}
+      for(let fieldName of fields) cleanData[fieldName] = params[fieldName]
+      emit({
+        type: "UserUpdated",
+        user: client.user,
+        data: {
+          userData: cleanData
+        }
+      })
+      return client.user
+    }
+  })
+}
 
 let completeUserDataFormProperties = {}
 for(let fieldName of userData.formComplete) completeUserDataFormProperties[fieldName] = userData.properties[fieldName]
