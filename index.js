@@ -181,7 +181,10 @@ let completeUserDataFormProperties = {}
 for(let fieldName of userData.formComplete) completeUserDataFormProperties[fieldName] = userData.properties[fieldName]
 users.action({
   name: "completeUserData",
-  properties: completeUserDataFormProperties,
+  properties: {
+    ...userData.completeFields,
+    ...completeUserDataFormProperties
+  },
   returns: {
     type: User,
     idOnly: true
