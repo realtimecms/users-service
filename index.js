@@ -71,7 +71,7 @@ users.action({
     return client.roles && client.roles.includes('admin')
   },
   async execute (params, { client, service }, emit) {
-    const user = service.cms.generateUid()
+    const user = app.generateUid()
     let data = { }
     for(let key in userFields) {
       data[key] = params[key]
@@ -314,6 +314,31 @@ if(userData.requiredFields) {
     }
   })
 }
+
+users.action({
+  name: "deleteMe",
+  properties: {
+    ...userData.deleteFields
+  },
+  returns: {
+    type: String
+  },
+  access: (params, { client }) => true, //!!client.user,
+  async execute(params, { client, service }, emit) {
+    const userRow = await User.get(client.user)
+    if(!userRow) throw 'notFound'
+    service.trigger({
+      type: "UserDeleted",
+      user: client.user
+    })
+    emit({
+      type: "UserDeleted",
+      user: client.user,
+    })
+    return 'ok'
+  }
+})
+
 
 module.exports = users
 
