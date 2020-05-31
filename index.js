@@ -50,15 +50,6 @@ const User = users.model({
         return client.roles && client.roles.includes('admin')
       }
     }
-  },
-  async onChange(oldValue, newValue) {
-    if(newValue) {
-      const display = await userData.getDisplay(newValue)
-      if(display == newValue.display) {
-        return true
-      }
-      return User.update(newValue.id, { display })
-    }
   }
 })
 
@@ -93,7 +84,10 @@ users.action({
     emit({
       type: 'UserCreated',
       user,
-      data: data
+      data: {
+        ...data,
+        display: await userData.getDisplay(data)
+      }
     })
 
     return user
@@ -130,7 +124,8 @@ users.action({
       user,
       data: {
         roles,
-        userData
+        userData,
+        display: await userData.getDisplay({ ...userRow, userData: { ...userRow.userData, ...userData } })
       }
     })
     emit("session", {
@@ -174,7 +169,8 @@ for(let updateMethodName in updateMethods) {
         type: "UserUpdated",
         user: client.user,
         data: {
-          userData: cleanData
+          userData: cleanData,
+          display: await userData.getDisplay({ ...userRow, userData: { ...userRow.userData, ...cleanData }})
         }
       })
       return client.user
@@ -204,7 +200,8 @@ users.action({
       type: "UserUpdated",
       user: client.user,
       data: {
-        userData: cleanData
+        userData: cleanData,
+        display: await userData.getDisplay({ ...userRow, userData: { ...userRow.userData, ...cleanData }})
       }
     })
     return client.user
@@ -231,7 +228,8 @@ for(let fieldName of userData.singleFieldUpdates) {
         type: "UserUpdated",
         user: client.user,
         data: {
-          userData: updateData
+          userData: updateData,
+          display: await userData.getDisplay({ ...userRow, userData: { ...userRow.userData, ...updateData }})
         }
       })
       return client.user
