@@ -146,7 +146,7 @@ if(userData.formUpdate) {
 for(let updateMethodName in updateMethods) {
   const fields = updateMethods[updateMethodName]
   if(!Array.isArray(fields)) continue
-  const additionalFields = userData.updateMethods[updateMethodName+'Fields']
+  const additionalFields = updateMethods[updateMethodName+'Fields']
   let updateMethodProperties = {}
   for(let fieldName of fields) updateMethodProperties[fieldName] = userData.properties[fieldName]
   users.action({
