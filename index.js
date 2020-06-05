@@ -8,6 +8,7 @@ const users = app.createServiceDefinition({
 })
 
 const userData = require('../config/userData.js')(users)
+const userDataDefinition = userData
 
 const userFields = {
   display: {
@@ -125,7 +126,8 @@ users.action({
       data: {
         roles,
         userData,
-        display: await userData.getDisplay({ ...userRow, userData: { ...userRow.userData, ...userData } })
+        display: await userDataDefinition.getDisplay(
+            { ...userRow, userData: { ...userRow.userData, ...userData } })
       }
     })
     emit("session", {
