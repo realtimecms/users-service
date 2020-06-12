@@ -27,7 +27,7 @@ const userFields = {
     },
     defaultValue: []
   },
-  userData
+  userData: userData.field
 }
 
 const User = users.model({
@@ -38,6 +38,7 @@ const User = users.model({
       type: String
     }
   },
+  search: userDataDefinition.search,
   indexes: {
     email: {
       property: "userData.email"
@@ -150,7 +151,7 @@ for(let updateMethodName in updateMethods) {
   if(!Array.isArray(fields)) continue
   const additionalFields = updateMethods[updateMethodName+'Fields']
   let updateMethodProperties = {}
-  for(let fieldName of fields) updateMethodProperties[fieldName] = userData.properties[fieldName]
+  for(let fieldName of fields) updateMethodProperties[fieldName] = userData.field.properties[fieldName]
   users.action({
     name: updateMethodName,
     properties: {
@@ -181,7 +182,8 @@ for(let updateMethodName in updateMethods) {
 }
 
 let completeUserDataFormProperties = {}
-for(let fieldName of userData.formComplete) completeUserDataFormProperties[fieldName] = userData.properties[fieldName]
+for(let fieldName of userData.formComplete)
+  completeUserDataFormProperties[fieldName] = userData.field.properties[fieldName]
 users.action({
   name: "completeUserData",
   properties: {
@@ -212,7 +214,7 @@ users.action({
 
 for(let fieldName of userData.singleFieldUpdates) {
   const props = {}
-  props[fieldName] = userData.properties[fieldName]
+  props[fieldName] = userData.field.properties[fieldName]
   users.action({
     name: "updateUser" + fieldName.slice(0,1).toUpperCase() + fieldName.slice(1),
     properties: props,
@@ -269,7 +271,8 @@ let publicUserData = {
   type: Object,
   properties: {}
 }
-for(let fieldName of userData.publicFields) publicUserData.properties[fieldName] = userData.properties[fieldName]
+for(let fieldName of userData.publicFields)
+  publicUserData.properties[fieldName] = userData.field.properties[fieldName]
 async function limitedFieldsPath(user, fields, method) {
   const queryFunc = async function(input, output, { fields, user }) {
     const mapper = function (obj) {
@@ -305,7 +308,8 @@ if(userData.requiredFields) {
     type: Object,
     properties: {}
   }
-  for (let fieldName of userData.requiredFields) requiredUserData.properties[fieldName] = userData.properties[fieldName]
+  for (let fieldName of userData.requiredFields)
+    requiredUserData.properties[fieldName] = userData.field.properties[fieldName]
   users.view({
     name: "me",
     properties: {},
