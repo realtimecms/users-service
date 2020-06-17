@@ -345,70 +345,74 @@ if(userData.requiredFields) {
   })
 }
 
-users.view({
-  name: 'findUsers',
-  properties: {
-    query: {
-      type: String
+if(userDataDefinition.publicSearchQuery) {
+  users.view({
+    name: 'findUsers',
+    properties: {
+      query: {
+        type: String
+      },
+      subject: {
+        type: String
+      }
     },
-    subject: {
-      type: String
-    }
-  },
-  returns: {
-    type: Array,
-    of: {
-      type: User
-    }
-  },
-  async fetch(params, { client, service }) {
-    console.log('SEARCH PARAMS', params)
-    const search = await app.connectToSearch()
-
-    const query = await userDataDefinition.publicSearchQuery(params)
-
-    console.log('USER QUERY\n' + JSON.stringify(query, null, '  '))
-    const result = await search.search(query)
-    console.log('USER SEARCH RESULTS', result.body.hits.total.value)
-    return result.body.hits.hits.map(hit => {
-      let cleaned = { id: hit._source.id }
-      for(const field of userData.publicFields) cleaned[field] = hit._source[field];
-      return cleaned
-    })
-  }
-})
-
-users.view({
-  name: 'adminFindUsers',
-  properties: {
-    query: {
-      type: String
+    returns: {
+      type: Array,
+      of: {
+        type: User
+      }
     },
-    subject: {
-      type: String
-    }
-  },
-  returns: {
-    type: Array,
-    of: {
-      type: User
-    }
-  },
-  access: (params, { client }) => {
-    return client.roles && client.roles.includes('admin')
-  },
-  async fetch(params, { client, service }) {
-    console.log('SEARCH PARAMS', params)
-    const search = await app.connectToSearch()
+    async fetch(params, { client, service }) {
+      console.log('SEARCH PARAMS', params)
+      const search = await app.connectToSearch()
 
-    const query = await (userDataDefinition.adminSearchQuery || userDataDefinition.publicSearchQuery)(params)
+      const query = await userDataDefinition.publicSearchQuery(params)
 
-    console.log('USER QUERY\n' + JSON.stringify(query, null, '  '))
-    const result = await search.search(query)
-    //console.log('USER SEARCH RESULTS', result.body)
-    return result.body.hits.hits.map(hit => hit._source)
-  }
-})
+      console.log('USER QUERY\n' + JSON.stringify(query, null, '  '))
+      const result = await search.search(query)
+      console.log('USER SEARCH RESULTS', result.body.hits.total.value)
+      return result.body.hits.hits.map(hit => {
+        let cleaned = { id: hit._source.id }
+        for(const field of userData.publicFields) cleaned[field] = hit._source[field];
+        return cleaned
+      })
+    }
+  })
+}
+
+if(userDataDefinition.publicSearchQuery || userDataDefinition.adminSearchQuery) {
+  users.view({
+    name: 'adminFindUsers',
+    properties: {
+      query: {
+        type: String
+      },
+      subject: {
+        type: String
+      }
+    },
+    returns: {
+      type: Array,
+      of: {
+        type: User
+      }
+    },
+    access: (params, { client }) => {
+      return client.roles && client.roles.includes('admin')
+    },
+    async fetch(params, { client, service }) {
+      console.log('SEARCH PARAMS', params)
+      const search = await app.connectToSearch()
+
+      const query = await (userDataDefinition.adminSearchQuery || userDataDefinition.publicSearchQuery)(params)
+
+      console.log('USER QUERY\n' + JSON.stringify(query, null, '  '))
+      const result = await search.search(query)
+      //console.log('USER SEARCH RESULTS', result.body)
+      return result.body.hits.hits.map(hit => hit._source)
+    }
+  })
+}
 
 module.exports = users
 
