@@ -194,7 +194,7 @@ users.action({
     type: User,
     idOnly: true
   },
-  access: (params, { client }) => true, //!!client.user,
+  access: (params, { client }) => !!client.user,
   async execute(params, { client }, emit) {
     const userRow = await User.get(client.user)
     if(!userRow) throw 'notFound'
@@ -241,6 +241,29 @@ for(let fieldName of userData.singleFieldUpdates) {
   })
 }
 
+users.action({
+  name: "deleteMe",
+  properties: {
+    ...userData.deleteFields
+  },
+  returns: {
+    type: String
+  },
+  access: (params, { client }) => true, //!!client.user,
+  async execute(params, { client, service }, emit) {
+    const userRow = await User.get(client.user)
+    if(!userRow) throw 'notFound'
+    service.trigger({
+      type: "UserDeleted",
+      user: client.user
+    })
+    emit({
+      type: "UserDeleted",
+      user: client.user,
+    })
+    return 'ok'
+  }
+})
 
 
 users.event({
@@ -297,7 +320,6 @@ users.view({
   returns: {
     ...publicUserData
   },
-  rawRead: true,
   daoPath({ user }, cd, method) {
     return limitedFieldsPath(user, userData.publicFields, method)
   }
@@ -316,7 +338,6 @@ if(userData.requiredFields) {
     returns: {
       ...requiredUserData
     },
-    rawRead: true,
     daoPath(ignore, {client, context}, method) {
       if(!client.user) return null
       return limitedFieldsPath(client.user, userData.requiredFields, method)
@@ -324,30 +345,70 @@ if(userData.requiredFields) {
   })
 }
 
-users.action({
-  name: "deleteMe",
+users.view({
+  name: 'findUsers',
   properties: {
-    ...userData.deleteFields
+    query: {
+      type: String
+    },
+    subject: {
+      type: String
+    }
   },
   returns: {
-    type: String
+    type: Array,
+    of: {
+      type: User
+    }
   },
-  access: (params, { client }) => true, //!!client.user,
-  async execute(params, { client, service }, emit) {
-    const userRow = await User.get(client.user)
-    if(!userRow) throw 'notFound'
-    service.trigger({
-      type: "UserDeleted",
-      user: client.user
+  async fetch(params, { client, service }) {
+    console.log('SEARCH PARAMS', params)
+    const search = await app.connectToSearch()
+
+    const query = await userDataDefinition.publicSearchQuery(params)
+
+    console.log('USER QUERY\n' + JSON.stringify(query, null, '  '))
+    const result = await search.search(query)
+    console.log('USER SEARCH RESULTS', result.body.hits.total.value)
+    return result.body.hits.hits.map(hit => {
+      let cleaned = { id: hit._source.id }
+      for(const field of userData.publicFields) cleaned[field] = hit._source[field];
+      return cleaned
     })
-    emit({
-      type: "UserDeleted",
-      user: client.user,
-    })
-    return 'ok'
   }
 })
 
+users.view({
+  name: 'adminFindUsers',
+  properties: {
+    query: {
+      type: String
+    },
+    subject: {
+      type: String
+    }
+  },
+  returns: {
+    type: Array,
+    of: {
+      type: User
+    }
+  },
+  access: (params, { client }) => {
+    return client.roles && client.roles.includes('admin')
+  },
+  async fetch(params, { client, service }) {
+    console.log('SEARCH PARAMS', params)
+    const search = await app.connectToSearch()
+
+    const query = await (userDataDefinition.adminSearchQuery || userDataDefinition.publicSearchQuery)(params)
+
+    console.log('USER QUERY\n' + JSON.stringify(query, null, '  '))
+    const result = await search.search(query)
+    //console.log('USER SEARCH RESULTS', result.body)
+    return result.body.hits.hits.map(hit => hit._source)
+  }
+})
 
 module.exports = users
 
