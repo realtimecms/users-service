@@ -109,7 +109,7 @@ users.action({
         type: String
       }
     },
-    userData
+    userData: userData.field
   },
   returns: {
     type: User,
