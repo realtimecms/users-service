@@ -420,7 +420,8 @@ async function start() {
   app.processServiceDefinition(users, [ ...app.defaultProcessors ])
   //console.log(JSON.stringify(users.toJSON(), null, "  "))
   await app.updateService(users)//, { force: true })
-  const service = await app.startService(users, { runCommands: true, handleEvents: true })
+  const service = await app.startService(users,
+      { runCommands: true, handleEvents: true, indexSearch: true })
 
   /*require("../config/metricsWriter.js")(users.name, () => ({
   }))*/
