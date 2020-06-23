@@ -2,12 +2,12 @@ const App = require("@live-change/framework")
 const validators = require("../validation")
 const app = new App()
 
-const users = app.createServiceDefinition({
+const definition = app.createServiceDefinition({
   name: "users",
   validators
 })
 
-const userData = require('../config/userData.js')(users)
+const userData = require('../config/userData.js')(definition)
 const userDataDefinition = userData
 
 const userFields = {
@@ -30,10 +30,13 @@ const userFields = {
   userData: userData.field
 }
 
-const User = users.model({
+const User = definition.model({
   name: "User",
   properties: {
     ...userFields,
+    online: {
+      type: Boolean
+    },
     slug: {
       type: String
     }
@@ -42,6 +45,17 @@ const User = users.model({
   indexes: {
     email: {
       property: "userData.email"
+    },
+    online: {
+      property: "online",
+      function: async function(input, output) {
+        const mapper =
+            (obj) => obj.online &&
+                ({ id: `${JSON.stringify(obj.timestamp)}_${obj.id}`, to: obj.id })
+        await input.table('users_User').onChange(
+            (obj, oldObj) => output.change(obj && mapper(obj), oldObj && mapper(oldObj))
+        )
+      }
     }
   },
   crud: {
@@ -55,7 +69,7 @@ const User = users.model({
   }
 })
 
-users.action({
+definition.action({
   name: "UserCreate",
   properties: {
     ...userFields
@@ -96,7 +110,7 @@ users.action({
   }
 })
 
-users.action({
+definition.action({
   name: "UserUpdate", // override CRUD operation
   properties: {
     user: {
@@ -152,7 +166,7 @@ for(let updateMethodName in updateMethods) {
   const additionalFields = updateMethods[updateMethodName+'Fields']
   let updateMethodProperties = {}
   for(let fieldName of fields) updateMethodProperties[fieldName] = userData.field.properties[fieldName]
-  users.action({
+  definition.action({
     name: updateMethodName,
     properties: {
       ...updateMethodProperties,
@@ -184,7 +198,7 @@ for(let updateMethodName in updateMethods) {
 let completeUserDataFormProperties = {}
 for(let fieldName of userData.formComplete)
   completeUserDataFormProperties[fieldName] = userData.field.properties[fieldName]
-users.action({
+definition.action({
   name: "completeUserData",
   properties: {
     ...userData.completeFields,
@@ -200,6 +214,7 @@ users.action({
     if(!userRow) throw 'notFound'
     let cleanData = {}
     for(let fieldName of userData.formComplete) cleanData[fieldName] = params[fieldName]
+
     emit({
       type: "UserUpdated",
       user: client.user,
@@ -215,7 +230,7 @@ users.action({
 for(let fieldName of userData.singleFieldUpdates) {
   const props = {}
   props[fieldName] = userData.field.properties[fieldName]
-  users.action({
+  definition.action({
     name: "updateUser" + fieldName.slice(0,1).toUpperCase() + fieldName.slice(1),
     properties: props,
     returns: {
@@ -241,7 +256,7 @@ for(let fieldName of userData.singleFieldUpdates) {
   })
 }
 
-users.action({
+definition.action({
   name: "deleteMe",
   properties: {
     ...userData.deleteFields
@@ -266,7 +281,7 @@ users.action({
 })
 
 
-users.event({
+definition.event({
   name: "loginMethodAdded",
   async execute({ user, method }) {
     console.log("LOGIN METHOD ADDED!", method)
@@ -278,7 +293,7 @@ users.event({
   }
 })
 
-users.event({
+definition.event({
   name: "loginMethodRemoved",
   async execute({ user, method }) {
     console.log("LOGIN METHOD REMOVED!", method)
@@ -297,20 +312,33 @@ let publicUserData = {
 for(let fieldName of userData.publicFields)
   publicUserData.properties[fieldName] = userData.field.properties[fieldName]
 async function limitedFieldsPath(user, fields, method) {
-  const queryFunc = async function(input, output, { fields, user }) {
-    const mapper = function (obj) {
-      let out = { id: obj.id, display: obj.display, slug: obj.slug || null }
-      for(const field of fields) out[field] = obj.userData[field]
-      return out
+  let queryFunc
+  if(userData.online && userData.online.public) {
+    queryFunc = async function(input, output, { fields, user }) {
+      const mapper = function (obj) {
+        let out = { id: obj.id, display: obj.display, slug: obj.slug || null, online: obj.online }
+        for(const field of fields) out[field] = obj.userData[field]
+        return out
+      }
+      await input.table('users_User').object(user).onChange((obj, oldObj) =>
+          output.change(obj && mapper(obj), oldObj && mapper(oldObj)) )
     }
-    await input.table('users_User').object(user).onChange((obj, oldObj) =>
-        output.change(obj && mapper(obj), oldObj && mapper(oldObj)) )
+  } else {
+    queryFunc = async function(input, output, { fields, user }) {
+      const mapper = function(obj) {
+        let out = { id: obj.id, display: obj.display, slug: obj.slug || null }
+        for(const field of fields) out[field] = obj.userData[field]
+        return out
+      }
+      await input.table('users_User').object(user).onChange((obj, oldObj) =>
+          output.change(obj && mapper(obj), oldObj && mapper(oldObj)))
+    }
   }
   const path = ['database', 'queryObject', app.databaseName, `(${queryFunc})`, { fields, user }]
   return path
 }
 
-users.view({
+definition.view({
   name: "publicUserData",
   properties: {
     user: {
@@ -332,7 +360,7 @@ if(userData.requiredFields) {
   }
   for (let fieldName of userData.requiredFields)
     requiredUserData.properties[fieldName] = userData.field.properties[fieldName]
-  users.view({
+  definition.view({
     name: "me",
     properties: {},
     returns: {
@@ -346,7 +374,7 @@ if(userData.requiredFields) {
 }
 
 if(userDataDefinition.publicSearchQuery) {
-  users.view({
+  definition.view({
     name: 'findUsers',
     properties: {
       query: {
@@ -381,7 +409,7 @@ if(userDataDefinition.publicSearchQuery) {
 }
 
 if(userDataDefinition.publicSearchQuery || userDataDefinition.adminSearchQuery) {
-  users.view({
+  definition.view({
     name: 'adminFindUsers',
     properties: {
       query: {
@@ -414,13 +442,80 @@ if(userDataDefinition.publicSearchQuery || userDataDefinition.adminSearchQuery) 
   })
 }
 
-module.exports = users
+definition.event({
+  name: "userOnline",
+  async execute({ user }) {
+    console.log("UPDATE USER ONLINE", user)
+    await User.update(user, { online: true })
+  }
+})
+
+definition.event({
+  name: "userOffline",
+  async execute({ user }) {
+    console.log("UPDATE USER ONLINE", user)
+    await User.update(user, { online: false })
+  }
+})
+
+definition.event({
+  name: "allUsersOffline",
+  async execute({ user, method }) {
+    await app.dao.request(['database', 'query', app.databaseName, `(${
+        async (input, output, { table, index }) => {
+          await (await input.index(index)).range({
+          }).onChange(async (ind, oldInd) => {
+            output.table(table).update(ind.to, [{ op: 'set', property: 'online', value: false }])
+          })
+        }
+    })`, { table: User.tableName, index: User.tableName+"_online" }])
+  }
+})
+
+if(userData.online) {
+  definition.trigger({
+    name: "userOnline",
+    properties: {
+    },
+    async execute({ user }, context, emit) {
+      emit({
+        type: "userOnline",
+        user
+      })
+    }
+  })
+
+  definition.trigger({
+    name: "userOffline",
+    properties: {
+    },
+    async execute({ user }, context, emit) {
+      emit({
+        type: "userOffline",
+        user
+      })
+    }
+  })
+
+  definition.trigger({
+    name: "allOffline",
+    properties: {
+    },
+    async execute({ }, context, emit) {
+      emit({
+        type: "allUsersOffline"
+      })
+    }
+  })
+}
+
+module.exports = definition
 
 async function start() {
-  app.processServiceDefinition(users, [ ...app.defaultProcessors ])
+  app.processServiceDefinition(definition, [ ...app.defaultProcessors ])
   //console.log(JSON.stringify(users.toJSON(), null, "  "))
-  await app.updateService(users)//, { force: true })
-  const service = await app.startService(users, { runCommands: true, handleEvents: true })
+  await app.updateService(definition)//, { force: true })
+  const service = await app.startService(definition, { runCommands: true, handleEvents: true })
 
   /*require("../config/metricsWriter.js")(users.name, () => ({
   }))*/
