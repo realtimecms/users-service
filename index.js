@@ -141,6 +141,23 @@ users.action({
   }
 })
 
+async function getRightSlug(userRow, updatedUserData, service) {
+  const slugParams = { user: userRow.id, userData: { ...userRow.userData, ...updatedUserData } }
+  let slug = userRow.slug
+  if(userData.isSlugRight && !await userData.isSlugRight(slug, slugParams, service)) {
+    console.log("CHANGING SLUG!")
+    slug = await userData.createSlug(slugParams, service)
+    await service.triggerService('slugs', {
+      type: "RedirectSlug",
+      group: "user",
+      path: userRow.slug,
+      redirect: slug
+    })
+    console.log("SLUG", userRow.slug, "REDIRECTED TO", slug)
+  }
+  return slug
+}
+
 let updateMethods = { ...userData.updateMethods }
 if(userData.formUpdate) {
   updateMethods.updateUserData = userData.formUpdate
@@ -163,15 +180,17 @@ for(let updateMethodName in updateMethods) {
       idOnly: true
     },
     access: (params, { client }) => !!client.user,
-    async execute(params, { client }, emit) {
+    async execute(params, { client, service }, emit) {
       const userRow = await User.get(client.user)
       if(!userRow) throw 'notFound'
       let cleanData = {}
       for(let fieldName of fields) cleanData[fieldName] = params[fieldName]
+      const slug = await getRightSlug(userRow, cleanData, service)
       emit({
         type: "UserUpdated",
         user: client.user,
         data: {
+          slug,
           userData: cleanData,
           display: await userData.getDisplay({ ...userRow, userData: { ...userRow.userData, ...cleanData }})
         }
@@ -195,15 +214,17 @@ users.action({
     idOnly: true
   },
   access: (params, { client }) => !!client.user,
-  async execute(params, { client }, emit) {
+  async execute(params, { client, service }, emit) {
     const userRow = await User.get(client.user)
     if(!userRow) throw 'notFound'
     let cleanData = {}
     for(let fieldName of userData.formComplete) cleanData[fieldName] = params[fieldName]
+    const slug = await getRightSlug(userRow, cleanData, service)
     emit({
       type: "UserUpdated",
       user: client.user,
       data: {
+        slug,
         userData: cleanData,
         display: await userData.getDisplay({ ...userRow, userData: { ...userRow.userData, ...cleanData }})
       }
@@ -223,15 +244,17 @@ for(let fieldName of userData.singleFieldUpdates) {
       idOnly: true
     },
     access: (params, { client }) => !!client.user,
-    async execute(params, { client }, emit) {
+    async execute(params, { client, service }, emit) {
       const userRow = await User.get(client.user)
       if(!userRow) throw 'notFound'
       let updateData = {}
       updateData[fieldName] = params[fieldName]
+      const slug = await getRightSlug(userRow, updateData, service)
       emit({
         type: "UserUpdated",
         user: client.user,
         data: {
+          slug,
           userData: updateData,
           display: await userData.getDisplay({ ...userRow, userData: { ...userRow.userData, ...updateData }})
         }
