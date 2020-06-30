@@ -12,13 +12,17 @@ const userDataDefinition = userData
 
 const userFields = {
   display: {
-    type: String
+    type: String,
+    preview: true,
+    view: true
   },
   roles: {
     type: Array,
     of: {
       type: String
-    }
+    },
+    preview: true,
+    view: true
   },
   loginMethods: {
     type: Array,
