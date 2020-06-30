@@ -280,6 +280,11 @@ users.action({
   async execute(params, { client, service }, emit) {
     const userRow = await User.get(client.user)
     if(!userRow) throw 'notFound'
+    /*emit({
+      type: "loggedOut",
+      session
+    })
+    return 'ok' // testing */
     service.trigger({
       type: "UserDeleted",
       user: client.user
