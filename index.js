@@ -39,7 +39,10 @@ const User = users.model({
   properties: {
     ...userFields,
     slug: {
-      type: String
+      type: String,
+      search: {
+        type: 'keyword'
+      }
     }
   },
   search: userDataDefinition.search,
