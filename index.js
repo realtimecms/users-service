@@ -12,13 +12,17 @@ const userDataDefinition = userData
 
 const userFields = {
   display: {
-    type: String
+    type: String,
+    preview: true,
+    view: true
   },
   roles: {
     type: Array,
     of: {
       type: String
-    }
+    },
+    preview: true,
+    view: true
   },
   loginMethods: {
     type: Array,
@@ -38,7 +42,10 @@ const User = definition.model({
       type: Boolean
     },
     slug: {
-      type: String
+      type: String,
+      search: {
+        type: 'keyword'
+      }
     }
   },
   search: userDataDefinition.search,
@@ -123,7 +130,7 @@ definition.action({
         type: String
       }
     },
-    userData
+    userData: userData.field
   },
   returns: {
     type: User,
@@ -155,6 +162,23 @@ definition.action({
   }
 })
 
+async function getRightSlug(userRow, updatedUserData, service) {
+  const slugParams = { user: userRow.id, userData: { ...userRow.userData, ...updatedUserData } }
+  let slug = userRow.slug
+  if(userData.isSlugRight && !await userData.isSlugRight(slug, slugParams, service)) {
+    console.log("CHANGING SLUG!")
+    slug = await userData.createSlug(slugParams, service)
+    await service.triggerService('slugs', {
+      type: "RedirectSlug",
+      group: "user",
+      path: userRow.slug,
+      redirect: slug
+    })
+    console.log("SLUG", userRow.slug, "REDIRECTED TO", slug)
+  }
+  return slug
+}
+
 let updateMethods = { ...userData.updateMethods }
 if(userData.formUpdate) {
   updateMethods.updateUserData = userData.formUpdate
@@ -177,15 +201,17 @@ for(let updateMethodName in updateMethods) {
       idOnly: true
     },
     access: (params, { client }) => !!client.user,
-    async execute(params, { client }, emit) {
+    async execute(params, { client, service }, emit) {
       const userRow = await User.get(client.user)
       if(!userRow) throw 'notFound'
       let cleanData = {}
       for(let fieldName of fields) cleanData[fieldName] = params[fieldName]
+      const slug = await getRightSlug(userRow, cleanData, service)
       emit({
         type: "UserUpdated",
         user: client.user,
         data: {
+          slug,
           userData: cleanData,
           display: await userData.getDisplay({ ...userRow, userData: { ...userRow.userData, ...cleanData }})
         }
@@ -209,16 +235,19 @@ definition.action({
     idOnly: true
   },
   access: (params, { client }) => !!client.user,
-  async execute(params, { client }, emit) {
+  async execute(params, { client, service }, emit) {
     const userRow = await User.get(client.user)
     if(!userRow) throw 'notFound'
     let cleanData = {}
     for(let fieldName of userData.formComplete) cleanData[fieldName] = params[fieldName]
 
+    const slug = await getRightSlug(userRow, cleanData, service)
+
     emit({
       type: "UserUpdated",
       user: client.user,
       data: {
+        slug,
         userData: cleanData,
         display: await userData.getDisplay({ ...userRow, userData: { ...userRow.userData, ...cleanData }})
       }
@@ -238,15 +267,17 @@ for(let fieldName of userData.singleFieldUpdates) {
       idOnly: true
     },
     access: (params, { client }) => !!client.user,
-    async execute(params, { client }, emit) {
+    async execute(params, { client, service }, emit) {
       const userRow = await User.get(client.user)
       if(!userRow) throw 'notFound'
       let updateData = {}
       updateData[fieldName] = params[fieldName]
+      const slug = await getRightSlug(userRow, updateData, service)
       emit({
         type: "UserUpdated",
         user: client.user,
         data: {
+          slug,
           userData: updateData,
           display: await userData.getDisplay({ ...userRow, userData: { ...userRow.userData, ...updateData }})
         }
@@ -268,6 +299,11 @@ definition.action({
   async execute(params, { client, service }, emit) {
     const userRow = await User.get(client.user)
     if(!userRow) throw 'notFound'
+    /*emit({
+      type: "loggedOut",
+      session
+    })
+    return 'ok' // testing */
     service.trigger({
       type: "UserDeleted",
       user: client.user
@@ -517,8 +553,10 @@ module.exports = definition
 async function start() {
   app.processServiceDefinition(definition, [ ...app.defaultProcessors ])
   //console.log(JSON.stringify(users.toJSON(), null, "  "))
-  await app.updateService(definition)//, { force: true })
-  const service = await app.startService(definition, { runCommands: true, handleEvents: true })
+
+  await app.updateService(users)//, { force: true })
+  const service = await app.startService(users,
+      { runCommands: true, handleEvents: true, indexSearch: true })
 
   /*require("../config/metricsWriter.js")(users.name, () => ({
   }))*/
