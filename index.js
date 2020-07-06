@@ -446,7 +446,7 @@ definition.event({
   name: "userOnline",
   async execute({ user }) {
     console.log("UPDATE USER ONLINE", user)
-    await User.update(user, { online: true })
+    await User.update(user, { online: true, lastOnline: new Date() })
   }
 })
 
@@ -454,7 +454,7 @@ definition.event({
   name: "userOffline",
   async execute({ user }) {
     console.log("UPDATE USER ONLINE", user)
-    await User.update(user, { online: false })
+    await User.update(user, { online: false, lastOnline: new Date() })
   }
 })
 
@@ -465,7 +465,10 @@ definition.event({
         async (input, output, { table, index }) => {
           await (await input.index(index)).range({
           }).onChange(async (ind, oldInd) => {
-            output.table(table).update(ind.to, [{ op: 'set', property: 'online', value: false }])
+            output.table(table).update(ind.to, [
+                { op: 'set', property: 'online', value: false },
+                { op: 'set', property: 'lastOnline', value: new Date() }
+              ])
           })
         }
     })`, { table: User.tableName, index: User.tableName+"_online" }])
