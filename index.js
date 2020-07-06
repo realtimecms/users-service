@@ -41,6 +41,9 @@ const User = definition.model({
     online: {
       type: Boolean
     },
+    lastOnline: {
+      type: Date
+    },
     slug: {
       type: String,
       search: {
@@ -343,7 +346,22 @@ definition.event({
 
 let publicUserData = {
   type: Object,
-  properties: {}
+  properties: {
+    display: {
+      type: String
+    },
+    slug: {
+      type: String
+    },
+    ...(userData.online && userData.online.public ? {
+      online: {
+        type: Boolean
+      },
+      lastOnline: {
+        type: Date
+      }
+    } : {})
+  }
 }
 for(let fieldName of userData.publicFields)
   publicUserData.properties[fieldName] = userData.field.properties[fieldName]
@@ -352,7 +370,13 @@ async function limitedFieldsPath(user, fields, method) {
   if(userData.online && userData.online.public) {
     queryFunc = async function(input, output, { fields, user }) {
       const mapper = function (obj) {
-        let out = { id: obj.id, display: obj.display, slug: obj.slug || null, online: obj.online }
+        let out = {
+          id: obj.id,
+          display: obj.display,
+          slug: obj.slug || null,
+          online: obj.online,
+          lastOnline: obj.lastOnline
+        }
         for(const field of fields) out[field] = obj.userData[field]
         return out
       }
@@ -362,7 +386,11 @@ async function limitedFieldsPath(user, fields, method) {
   } else {
     queryFunc = async function(input, output, { fields, user }) {
       const mapper = function(obj) {
-        let out = { id: obj.id, display: obj.display, slug: obj.slug || null }
+        let out = {
+          id: obj.id,
+          display: obj.display,
+          slug: obj.slug || null
+        }
         for(const field of fields) out[field] = obj.userData[field]
         return out
       }
@@ -554,7 +582,7 @@ async function start() {
   app.processServiceDefinition(definition, [ ...app.defaultProcessors ])
   //console.log(JSON.stringify(users.toJSON(), null, "  "))
 
-  await app.updateService(users)//, { force: true })
+  await app.updateService(definition)//, { force: true })
   const service = await app.startService(definition,
       { runCommands: true, handleEvents: true, indexSearch: true })
 
