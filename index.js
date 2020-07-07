@@ -61,7 +61,7 @@ const User = definition.model({
       function: async function(input, output) {
         const mapper =
             (obj) => obj.online &&
-                ({ id: `${JSON.stringify(obj.timestamp)}_${obj.id}`, to: obj.id })
+                ({ id: `${obj.id}`, to: obj.id })
         await input.table('users_User').onChange(
             (obj, oldObj) => output.change(obj && mapper(obj), oldObj && mapper(oldObj))
         )
