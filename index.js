@@ -456,6 +456,7 @@ if(userDataDefinition.publicSearchQuery) {
     },
     async fetch(params, { client, service }) {
       console.log('SEARCH PARAMS', params)
+      if(params.limit <= 0) return []
       const search = await app.connectToSearch()
 
       const query = await userDataDefinition.publicSearchQuery(params)
@@ -494,6 +495,7 @@ if(userDataDefinition.publicSearchQuery || userDataDefinition.adminSearchQuery) 
     },
     async fetch(params, { client, service }) {
       console.log('SEARCH PARAMS', params)
+      if(params.limit <= 0) return []
       const search = await app.connectToSearch()
 
       const query = await (userDataDefinition.adminSearchQuery || userDataDefinition.publicSearchQuery)(params)
