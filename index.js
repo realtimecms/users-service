@@ -512,7 +512,7 @@ definition.event({
   name: "userOnline",
   async execute({ user }) {
     console.log("UPDATE USER ONLINE", user)
-    await User.update(user, { online: true, lastOnline: new Date() })
+    await User.update(user, { id: user, online: true, lastOnline: new Date() })
   }
 })
 
@@ -520,7 +520,7 @@ definition.event({
   name: "userOffline",
   async execute({ user }) {
     console.log("UPDATE USER ONLINE", user)
-    await User.update(user, { online: false, lastOnline: new Date() })
+    await User.update(user, { id: user, online: false, lastOnline: new Date() })
   }
 })
 
