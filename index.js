@@ -508,9 +508,14 @@ if(userDataDefinition.publicSearchQuery || userDataDefinition.adminSearchQuery) 
   })
 }
 
+const waitingOnline = new Set()
+
 definition.event({
   name: "userOnline",
   async execute({ user }) {
+    waitingOnline.add(user)
+    await User.condition(user)
+    if(!waitingOnline.has(user)) return
     console.log("UPDATE USER ONLINE", user)
     await User.update(user, { id: user, online: true, lastOnline: new Date() })
   }
@@ -519,6 +524,8 @@ definition.event({
 definition.event({
   name: "userOffline",
   async execute({ user }) {
+    waitingOnline.delete(user)
+    await User.condition(user)
     console.log("UPDATE USER ONLINE", user)
     await User.update(user, { id: user, online: false, lastOnline: new Date() })
   }
@@ -527,6 +534,7 @@ definition.event({
 definition.event({
   name: "allUsersOffline",
   async execute({ user, method }) {
+    waitingOnline.clear()
     await app.dao.request(['database', 'query', app.databaseName, `(${
         async (input, output, { table, index }) => {
           await (await input.index(index)).range({
