@@ -517,7 +517,7 @@ definition.event({
     await User.condition(user)
     if(!waitingOnline.has(user)) return
     console.log("UPDATE USER ONLINE", user)
-    await User.update(user, { id: user, online: true, lastOnline: new Date() })
+    await User.update(user, { id: user, online: true, lastOnline: new Date() }, { ifExists: true })
   }
 })
 
@@ -527,7 +527,7 @@ definition.event({
     waitingOnline.delete(user)
     await User.condition(user)
     console.log("UPDATE USER ONLINE", user)
-    await User.update(user, { id: user, online: false, lastOnline: new Date() })
+    await User.update(user, { id: user, online: false, lastOnline: new Date() }, { ifExists: true })
   }
 })
 
@@ -542,7 +542,7 @@ definition.event({
             output.table(table).update(ind.to, [
                 { op: 'set', property: 'online', value: false },
                 { op: 'set', property: 'lastOnline', value: new Date() }
-              ])
+              ], { ifExists: true })
           })
         }
     })`, { table: User.tableName, index: User.tableName+"_online" }])
@@ -555,6 +555,7 @@ if(userData.online) {
     properties: {
     },
     async execute({ user }, context, emit) {
+      console.log("TRIGGER ONLINE", user)
       emit({
         type: "userOnline",
         user
@@ -567,6 +568,7 @@ if(userData.online) {
     properties: {
     },
     async execute({ user }, context, emit) {
+      console.log("TRIGGER OFFLINE", user)
       emit({
         type: "userOffline",
         user
@@ -579,6 +581,7 @@ if(userData.online) {
     properties: {
     },
     async execute({ }, context, emit) {
+      console.log("TRIGGER ALL OFFLINE")
       emit({
         type: "allUsersOffline"
       })
