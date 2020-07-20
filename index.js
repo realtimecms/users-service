@@ -70,6 +70,7 @@ const User = definition.model({
   },
   crud: {
     deleteTrigger: true,
+    ignoreValidation: true,
     options: {
       access: (params, {client, service}) => {
         if(client.user == params.user) return true
