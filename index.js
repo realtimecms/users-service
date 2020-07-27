@@ -39,16 +39,19 @@ const User = definition.model({
   properties: {
     ...userFields,
     online: {
-      type: Boolean
+      type: Boolean,
+      view: true
     },
     lastOnline: {
-      type: Date
+      type: Date,
+      view: true
     },
     slug: {
       type: String,
       search: {
         type: 'keyword'
-      }
+      },
+      view: true
     }
   },
   search: userDataDefinition.search,
