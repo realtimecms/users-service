@@ -39,16 +39,19 @@ const User = definition.model({
   properties: {
     ...userFields,
     online: {
-      type: Boolean
+      type: Boolean,
+      view: true
     },
     lastOnline: {
-      type: Date
+      type: Date,
+      view: true
     },
     slug: {
       type: String,
       search: {
         type: 'keyword'
-      }
+      },
+      view: true
     }
   },
   search: userDataDefinition.search,
@@ -61,7 +64,7 @@ const User = definition.model({
       function: async function(input, output) {
         const mapper =
             (obj) => obj.online &&
-                ({ id: `${JSON.stringify(obj.timestamp)}_${obj.id}`, to: obj.id })
+                ({ id: `${obj.id}`, to: obj.id })
         await input.table('users_User').onChange(
             (obj, oldObj) => output.change(obj && mapper(obj), oldObj && mapper(oldObj))
         )
@@ -70,6 +73,7 @@ const User = definition.model({
   },
   crud: {
     deleteTrigger: true,
+    ignoreValidation: true,
     options: {
       access: (params, {client, service}) => {
         if(client.user == params.user) return true
@@ -512,25 +516,33 @@ if(userDataDefinition.publicSearchQuery || userDataDefinition.adminSearchQuery) 
   })
 }
 
+const waitingOnline = new Set()
+
 definition.event({
   name: "userOnline",
   async execute({ user }) {
+    waitingOnline.add(user)
+    await User.condition(user)
+    if(!waitingOnline.has(user)) return
     console.log("UPDATE USER ONLINE", user)
-    await User.update(user, { online: true, lastOnline: new Date() })
+    await User.update(user, { id: user, online: true, lastOnline: new Date() }, { ifExists: true })
   }
 })
 
 definition.event({
   name: "userOffline",
   async execute({ user }) {
+    waitingOnline.delete(user)
+    await User.condition(user)
     console.log("UPDATE USER ONLINE", user)
-    await User.update(user, { online: false, lastOnline: new Date() })
+    await User.update(user, { id: user, online: false, lastOnline: new Date() }, { ifExists: true })
   }
 })
 
 definition.event({
   name: "allUsersOffline",
   async execute({ user, method }) {
+    waitingOnline.clear()
     await app.dao.request(['database', 'query', app.databaseName, `(${
         async (input, output, { table, index }) => {
           await (await input.index(index)).range({
@@ -538,7 +550,7 @@ definition.event({
             output.table(table).update(ind.to, [
                 { op: 'set', property: 'online', value: false },
                 { op: 'set', property: 'lastOnline', value: new Date() }
-              ])
+              ], { ifExists: true })
           })
         }
     })`, { table: User.tableName, index: User.tableName+"_online" }])
@@ -551,6 +563,7 @@ if(userData.online) {
     properties: {
     },
     async execute({ user }, context, emit) {
+      console.log("TRIGGER ONLINE", user)
       emit({
         type: "userOnline",
         user
@@ -563,6 +576,7 @@ if(userData.online) {
     properties: {
     },
     async execute({ user }, context, emit) {
+      console.log("TRIGGER OFFLINE", user)
       emit({
         type: "userOffline",
         user
@@ -575,6 +589,7 @@ if(userData.online) {
     properties: {
     },
     async execute({ }, context, emit) {
+      console.log("TRIGGER ALL OFFLINE")
       emit({
         type: "allUsersOffline"
       })
