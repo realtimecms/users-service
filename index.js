@@ -370,6 +370,7 @@ async function limitedFieldsPath(user, fields, method) {
   if(userData.online && userData.online.public) {
     queryFunc = async function(input, output, { fields, user }) {
       const mapper = function (obj) {
+        if(!obj.userData) return null // deleted users
         let out = {
           id: obj.id,
           display: obj.display,
@@ -386,6 +387,7 @@ async function limitedFieldsPath(user, fields, method) {
   } else {
     queryFunc = async function(input, output, { fields, user }) {
       const mapper = function(obj) {
+        if(!obj.userData) return null // deleted users
         let out = {
           id: obj.id,
           display: obj.display,
@@ -413,7 +415,9 @@ definition.view({
     ...publicUserData
   },
   daoPath({ user }, cd, method) {
-    return limitedFieldsPath(user, userData.publicFields, method)
+    const publicUserDataPath = limitedFieldsPath(user, userData.publicFields, method)
+    console.log("PUBLIC USER DATA PATH", publicUserDataPath)
+    return publicUserDataPath
   }
 })
 
