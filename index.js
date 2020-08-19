@@ -374,6 +374,7 @@ async function limitedFieldsPath(user, fields, method) {
   if(userData.online && userData.online.public) {
     queryFunc = async function(input, output, { fields, user }) {
       const mapper = function (obj) {
+        if(!obj) return null
         if(!obj.userData) return null // deleted users
         let out = {
           id: obj.id,
@@ -386,11 +387,12 @@ async function limitedFieldsPath(user, fields, method) {
         return out
       }
       await input.table('users_User').object(user).onChange((obj, oldObj) =>
-          output.change(obj && mapper(obj), oldObj && mapper(oldObj)) )
+          output.change(mapper(obj), mapper(oldObj)))
     }
   } else {
     queryFunc = async function(input, output, { fields, user }) {
       const mapper = function(obj) {
+        if(!obj) return null
         if(!obj.userData) return null // deleted users
         let out = {
           id: obj.id,
@@ -401,7 +403,7 @@ async function limitedFieldsPath(user, fields, method) {
         return out
       }
       await input.table('users_User').object(user).onChange((obj, oldObj) =>
-          output.change(obj && mapper(obj), oldObj && mapper(oldObj)))
+          output.change(mapper(obj), mapper(oldObj)))
     }
   }
   const path = ['database', 'queryObject', app.databaseName, `(${queryFunc})`, { fields, user }]
@@ -418,9 +420,9 @@ definition.view({
   returns: {
     ...publicUserData
   },
-  daoPath({ user }, cd, method) {
-    const publicUserDataPath = limitedFieldsPath(user, userData.publicFields, method)
-    console.log("PUBLIC USER DATA PATH", publicUserDataPath)
+  async daoPath({ user }, cd, method) {
+    const publicUserDataPath = await limitedFieldsPath(user, userData.publicFields, method)
+    console.log("PUBLIC USER DATA PATH", JSON.stringify(publicUserDataPath))
     return publicUserDataPath
   }
 })
