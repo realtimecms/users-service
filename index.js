@@ -262,7 +262,7 @@ definition.action({
     await service.trigger({
       type: "OnRegisterComplete",
       session: client.sessionId,
-      user: user,
+      user: client.user,
       userData: {
         ...userRow.userData,
         ...cleanData
