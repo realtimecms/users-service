@@ -259,6 +259,15 @@ definition.action({
         display: await userData.getDisplay({ ...userRow, userData: { ...userRow.userData, ...cleanData }})
       }
     })
+    await service.trigger({
+      type: "OnRegisterComplete",
+      session: client.sessionId,
+      user: client.user,
+      userData: {
+        ...userRow.userData,
+        ...cleanData
+      }
+    })
     return client.user
   }
 })
