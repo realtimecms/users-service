@@ -369,7 +369,7 @@ let publicUserData = {
 }
 for(let fieldName of userData.publicFields)
   publicUserData.properties[fieldName] = userData.field.properties[fieldName]
-async function limitedFieldsPath(user, fields, method) {
+async function limitedFieldsPath(user, fields) {
   let queryFunc
   if(userData.online && userData.online.public) {
     queryFunc = async function(input, output, { fields, user }) {
@@ -442,7 +442,7 @@ if(userData.requiredFields) {
     },
     daoPath(ignore, {client, context}, method) {
       if(!client.user) return null
-      return limitedFieldsPath(client.user, userData.requiredFields, method)
+      return limitedFieldsPath(client.user, userData.requiredFields)
     }
   })
 }
