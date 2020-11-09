@@ -417,6 +417,10 @@ if(userDataDefinition.publicSearchQuery || userDataDefinition.adminSearchQuery) 
 module.exports = users
 
 async function start() {
+  process.on('unhandledRejection', (reason, p) => {
+    console.log('Unhandled Rejection at: Promise', p, 'reason:', reason)
+  })
+
   app.processServiceDefinition(users, [ ...app.defaultProcessors ])
   //console.log(JSON.stringify(users.toJSON(), null, "  "))
   await app.updateService(users)//, { force: true })
