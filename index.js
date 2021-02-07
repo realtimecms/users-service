@@ -608,6 +608,40 @@ if(userData.online) {
   })
 }
 
+definition.action({
+  name: "switchUser",
+  properties: {
+    to: {
+      type: User
+    }
+  },
+  access: (params, { client }) => {
+    return client.roles && client.roles.includes('admin')
+  },
+  async execute({ to }, { client, service }, emit) {
+    const session = client.sessionId
+    await service.trigger({
+      type: "OnLogout",
+      user: client.user,
+      session: client.sessionId
+    })
+    const userRow = await User.get(to)
+    emit("session", [
+      {
+        type: "loggedOut",
+        session
+      },
+      {
+        type: "loggedIn",
+        user: to,
+        session: client.sessionId,
+        expire: null,
+        roles: userRow.roles || []
+      }
+    ])
+  }
+})
+
 module.exports = definition
 
 async function start() {
