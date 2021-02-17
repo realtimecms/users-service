@@ -75,7 +75,8 @@ const User = definition.model({
     deleteTrigger: true,
     ignoreValidation: true,
     options: {
-      access: (params, {client, service}) => {
+      access: (params, {client, service, visibilityTest}) => {
+        if(visibilityTest) return true
         if(client.user == params.user) return true
         return client.roles && client.roles.includes('admin')
       }
