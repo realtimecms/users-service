@@ -532,28 +532,28 @@ const waitingOnline = new Set()
 
 definition.event({
   name: "userOnline",
-  async execute({ user }) {
+  async execute({ user, lastOnline }) {
     waitingOnline.add(user)
     await User.condition(user)
     if(!waitingOnline.has(user)) return
     console.log("UPDATE USER ONLINE", user)
-    await User.update(user, { id: user, online: true, lastOnline: new Date() }, { ifExists: true })
+    await User.update(user, { id: user, online: true, lastOnline }, { ifExists: true })
   }
 })
 
 definition.event({
   name: "userOffline",
-  async execute({ user }) {
+  async execute({ user, lastOnline }) {
     waitingOnline.delete(user)
     await User.condition(user)
     console.log("UPDATE USER ONLINE", user)
-    await User.update(user, { id: user, online: false, lastOnline: new Date() }, { ifExists: true })
+    await User.update(user, { id: user, online: false, lastOnline }, { ifExists: true })
   }
 })
 
 definition.event({
   name: "allUsersOffline",
-  async execute({ user, method }) {
+  async execute({ lastOnline }) {
     waitingOnline.clear()
     await app.dao.request(['database', 'query', app.databaseName, `(${
         async (input, output, { table, index }) => {
@@ -561,7 +561,7 @@ definition.event({
           }).onChange(async (ind, oldInd) => {
             output.table(table).update(ind.to, [
                 { op: 'set', property: 'online', value: false },
-                { op: 'set', property: 'lastOnline', value: new Date() }
+                { op: 'set', property: 'lastOnline', value: lastOnline }
               ], { ifExists: true })
           })
         }
@@ -574,11 +574,27 @@ if(userData.online) {
     name: "userOnline",
     properties: {
     },
-    async execute({ user }, context, emit) {
+    async execute({ user, lastOnline }, context, emit) {
       console.log("TRIGGER ONLINE", user)
+      const userData = User.get(user)
+      if(userData && !userData.online) {
+        const timestamp = Date.now()
+        const time = (new Date()).toISOString()
+        ;(await app.connectToAnalytics()).saveEvents([
+          {
+            type: 'userOnline',
+            client: { user },
+            timestamp, time,
+            offlineDuration: userData.lastOnline
+                ? Date.now() - (new Date(userData.lastOnline)).getTime()
+                : undefined
+          }
+        ])
+      }
       emit({
         type: "userOnline",
-        user
+        user,
+        lastOnline: new Date()
       })
     }
   })
@@ -587,11 +603,25 @@ if(userData.online) {
     name: "userOffline",
     properties: {
     },
-    async execute({ user }, context, emit) {
+    async execute({ user, lastOnline }, context, emit) {
       console.log("TRIGGER OFFLINE", user)
+      const userData = User.get(user)
+      if(userData && userData.online && publicInfo.lastOnline) {
+        const timestamp = Date.now()
+        const time = (new Date()).toISOString()
+        ;(await app.connectToAnalytics()).saveEvents([
+          {
+            type: 'userOffline',
+            client: { user },
+            timestamp, time,
+            onlineDuration: Date.now() - (new Date(userData.lastOnline)).getTime()
+          }
+        ])
+      }
       emit({
         type: "userOffline",
-        user
+        user,
+        lastOnline: new Date()
       })
     }
   })
@@ -603,7 +633,8 @@ if(userData.online) {
     async execute({ }, context, emit) {
       console.log("TRIGGER ALL OFFLINE")
       emit({
-        type: "allUsersOffline"
+        type: "allUsersOffline",
+        lastOnline: new Date()
       })
     }
   })
