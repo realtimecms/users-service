@@ -556,7 +556,7 @@ definition.event({
   async execute({ lastOnline }) {
     waitingOnline.clear()
     await app.dao.request(['database', 'query', app.databaseName, `(${
-        async (input, output, { table, index }) => {
+        async (input, output, { table, index, lastOnline }) => {
           await (await input.index(index)).range({
           }).onChange(async (ind, oldInd) => {
             output.table(table).update(ind.to, [
@@ -565,7 +565,7 @@ definition.event({
               ], { ifExists: true })
           })
         }
-    })`, { table: User.tableName, index: User.tableName+"_online" }])
+    })`, { table: User.tableName, index: User.tableName+"_online", lastOnline }])
   }
 })
 
