@@ -325,11 +325,23 @@ definition.action({
       type: "UserDeleted",
       user: client.user
     })
-    emit({
-      type: "UserDeleted",
-      user: client.user,
-    })
     return 'ok'
+  }
+})
+
+definition.trigger({
+  name: "UserDeleted",
+  properties: {
+    user: {
+      type: User,
+      idOnly: true
+    }
+  },
+  async execute({ user }, context, emit) {
+    emit([{
+      type: "UserDeleted",
+      user
+    }])
   }
 })
 
