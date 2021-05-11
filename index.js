@@ -495,12 +495,14 @@ if(userDataDefinition.publicSearchQuery) {
 
       console.log('USER QUERY\n' + JSON.stringify(query, null, '  '))
       const result = await search.search(query)
+      //console.log('USER SEARCH RESULT', result.body.hits.hits)
       console.log('USER SEARCH RESULTS', result.body.hits.total.value)
-      return result.body.hits.hits.map(hit => {
-        let cleaned = { id: hit._source.id }
-        for(const field of userData.publicFields) cleaned[field] = hit._source[field];
+      const cleanedData = result.body.hits.hits.map(hit => {
+        let cleaned = { id: hit._source.id, display: hit._source.display }
+        for(const field of userData.publicFields) cleaned[field] = hit._source.userData[field];
         return cleaned
       })
+      return cleanedData
     }
   })
 }
