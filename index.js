@@ -21,7 +21,10 @@ const userFields = {
       type: String
     },
     preview: true,
-    view: true
+    view: true,
+    search: {
+      type: 'keyword'
+    }
   },
   loginMethods: {
     type: Array,
