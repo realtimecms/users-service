@@ -471,6 +471,29 @@ if(userData.requiredFields) {
   })
 }
 
+if(userData.privateViews) {
+  for(const privateViewName in userData.privateViews) {
+    const privateView = userData.privateViews[privateViewName]
+    let privateViewData = {
+      type: Object,
+      properties: {}
+    }
+    for (let fieldName of privateView)
+      privateViewData.properties[fieldName] = userData.field.properties[fieldName]
+    definition.view({
+      name: privateViewName,
+      properties: {},
+      returns: {
+        ...privateViewData
+      },
+      daoPath(ignore, {client, context}, method) {
+        if(!client.user) return null
+        return limitedFieldsPath(client.user, privateView)
+      }
+    })
+  }
+}
+
 if(userDataDefinition.publicSearchQuery) {
   definition.view({
     name: 'findUsers',
