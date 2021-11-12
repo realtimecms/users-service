@@ -446,7 +446,7 @@ definition.view({
   },
   async daoPath({ user }, cd, method) {
     const publicUserDataPath = await limitedFieldsPath(user, userData.publicFields, method)
-    console.log("PUBLIC USER DATA PATH", JSON.stringify(publicUserDataPath))
+    //console.log("PUBLIC USER DATA PATH", JSON.stringify(publicUserDataPath))
     return publicUserDataPath
   }
 })
@@ -486,9 +486,44 @@ if(userData.privateViews) {
       returns: {
         ...privateViewData
       },
-      daoPath(ignore, {client, context}, method) {
+      daoPath(ignore, { client, context }, method) {
         if(!client.user) return null
         return limitedFieldsPath(client.user, privateView)
+      }
+    })
+  }
+}
+
+if(userData.limitedViews) {
+  for(const limitedViewName in userData.limitedViews) {
+    const limitedView = userData.limitedViews[limitedViewName]
+    let limitedViewData = {
+      type: Object,
+      properties: {}
+    }
+    for (let fieldName of limitedView.properties)
+      limitedViewData.properties[fieldName] = userData.field.properties[fieldName]
+    definition.view({
+      name: limitedViewName,
+      properties: {
+        user: {
+          type: User
+        }
+      },
+      returns: {
+        ...limitedViewData
+      },
+      access: (params, { client, service }) => {
+        if(!client.roles) return false
+        for(const role of limitedView.roles) {
+          if(client.roles.includes(role)) return true
+        }
+        return false
+      },
+      async daoPath({ user }, cd, method) {
+        const publicUserDataPath = await limitedFieldsPath(user, limitedView.properties, method)
+        console.log("LIMITED USER DATA PATH", JSON.stringify(publicUserDataPath))
+        return publicUserDataPath
       }
     })
   }
