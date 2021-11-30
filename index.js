@@ -393,7 +393,8 @@ let publicUserData = {
 }
 for(let fieldName of userData.publicFields)
   publicUserData.properties[fieldName] = userData.field.properties[fieldName]
-async function limitedFieldsPath(user, fields) {
+
+async function limitedFieldsPath(user, fields, withLoginMethods = false) {
   let queryFunc
   if(userData.online && userData.online.public) {
     queryFunc = async function(input, output, { fields, user }) {
@@ -470,6 +471,30 @@ if(userData.requiredFields) {
     }
   })
 }
+
+
+definition.view({
+  name: 'myLoginMethods',
+  returns: {
+    ...userFields.loginMethods
+  },
+  daoPath(ignore, {client, context}, method) {
+    if(!client.user) return null
+    const queryFunc = async function(input, output, { fields, user }) {
+      const mapper = function (obj) {
+        if(!obj) return null
+        let out = {
+          id: obj.id,
+          loginMethods: obj.loginMethods
+        }
+        return out
+      }
+      await input.table('users_User').object(user).onChange((obj, oldObj) =>
+          output.change( mapper(obj), mapper(oldObj) ))
+    }
+    return ['database', 'queryObject', app.databaseName, `(${queryFunc})`, { user: client.user }]
+  }
+})
 
 if(userData.privateViews) {
   for(const privateViewName in userData.privateViews) {
