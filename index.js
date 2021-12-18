@@ -584,7 +584,8 @@ if(userDataDefinition.publicSearchQuery) {
       console.log('USER SEARCH RESULTS', result.body.hits.total.value)
       const cleanedData = result.body.hits.hits.map(hit => {
         let cleaned = { id: hit._source.id, display: hit._source.display }
-        for(const field of userData.publicFields) cleaned[field] = hit._source.userData[field];
+        for(const field of userData.publicFields) cleaned[field] = hit._source.userData[field]
+        cleaned.slug = hit._source.slug
         return cleaned
       })
       return cleanedData
@@ -626,6 +627,42 @@ if(userDataDefinition.publicSearchQuery || userDataDefinition.adminSearchQuery) 
     }
   })
 }
+
+if(userDataDefinition.topUsersQuery) {
+  definition.view({
+    name: 'topUsers',
+    properties: {
+      limit: {
+        type: Number
+      }
+    },
+    returns: {
+      type: Array,
+      of: {
+        type: User
+      }
+    },
+    async fetch(params, { client, service }) {
+      if(params.limit <= 0) return []
+      const search = await app.connectToSearch()
+
+      const query = await userDataDefinition.topUsersQuery(params)
+
+      console.log('TOP USER QUERY\n' + JSON.stringify(query, null, '  '))
+      const result = await search.search(query)
+      //console.log('USER SEARCH RESULT', result.body.hits.hits)
+      console.log('TOP USERS SEARCH RESULTS', result.body.hits.total.value)
+      const cleanedData = result.body.hits.hits.map(hit => {
+        let cleaned = { id: hit._source.id, display: hit._source.display }
+        for(const field of userData.publicFields) cleaned[field] = hit._source.userData[field]
+        cleaned.slug = hit._source.slug
+        return cleaned
+      })
+      return cleanedData
+    }
+  })
+}
+
 
 const waitingOnline = new Set()
 
